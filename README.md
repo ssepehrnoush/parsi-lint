@@ -1,43 +1,48 @@
-# parsi-lint
+<!--
+  This README deliberately contains broken Persian as examples: the Arabic/Persian
+  lookalike table, a missing ZWNJ, and mojibake. Those four rules are turned off
+  for this file only; every other rule still runs over it in CI.
+  parsi-lint-disable-file type/arabic-letters type/zwnj-prefix enc/mojibake type/latin-digits
+-->
+<h1 align="center">parsi-lint</h1>
 
-**A linter for Persian (Farsi) content.** It catches the things that make Persian text look machine-written or broken: AI tells, missing ZWNJ (نیم‌فاصله), Arabic letters posing as Persian, mojibake, and titles that Google will cut off.
+<p align="center">
+  Catch the Persian text bugs that make content look machine-written, break search, or ship broken. Before they ship, not after.
+</p>
 
-Zero dependencies. Runs in CI. Fixes what it can safely fix.
+<p align="center">
+  <img alt="license MIT" src="https://img.shields.io/badge/license-MIT-blue.svg">
+  <img alt="node >= 18" src="https://img.shields.io/badge/node-%3E%3D18-brightgreen">
+  <img alt="dependencies 0" src="https://img.shields.io/badge/dependencies-0-brightgreen">
+  <img alt="rules 23" src="https://img.shields.io/badge/rules-23-8b5cf6">
+</p>
 
-[فارسی](README.fa.md)
+<p align="center">
+  <img alt="parsi-lint finding four errors in a Persian article, then fixing three of them" src="assets/demo.svg" width="880">
+</p>
 
-```bash
-npx github:ssepehrnoush/parsi-lint content/
-```
+<p align="center"><a href="README.fa.md">فارسی</a></p>
 
-```
-content/blog/laser.md
-    12:34 error  Long dash in Persian content, a strong AI tell. Use a comma, «» or restructure.  ai/long-dash
-           › —
-    18:7  error  "کتاب ها" needs a ZWNJ: "کتاب‌ها".                                                type/zwnj-plural
-           › کتاب ها
-    24:1  error  Arabic "ي" should be Persian "ی". Different code points break search.             type/arabic-letters
-           › ي
-    31:52 warn   Filler phrase "در دنیای امروز", common in machine-written Persian.                ai/cliche
-           › در دنیای امروز
+## The bugs you cannot see
 
-3 errors, 1 warning in 1 file
-```
+Three of these are invisible on screen. That is what makes them expensive.
 
----
+**An Arabic letter wearing a Persian face.** Persian and Arabic share a script but not a keyboard, and several letters exist twice in Unicode:
 
-## Why this exists
+| Character | Codepoint | Name | Correct in Persian |
+| --- | --- | --- | --- |
+| `ك` | `U+0643` | Arabic kaf | no |
+| `ک` | `U+06A9` | Persian keheh | yes |
+| `ي` | `U+064A` | Arabic yeh | no |
+| `ی` | `U+06CC` | Farsi yeh | yes |
 
-Persian text processing tools are normalizers: give them text, get cleaned text back. That is the wrong shape for a content pipeline. You do not want a script silently rewriting a medical article on its way to production. You want to **know what is wrong, in a diff, before it ships**, and to decide.
+If those four look like two characters to you, that is the whole problem. A title with the Arabic `ك` never matches a search for the Persian one. Nothing looks wrong. The page just does not rank.
 
-So this is a linter, not a normalizer:
+**A missing ZWNJ.** «می شود» and «می‌شود» render almost identically and tokenize differently.
 
-- **Exit code 1 on errors**, so CI can block a bad merge.
-- **Every finding has a file, line, and column**, so it lands on the right line of the diff.
-- **`--fix` is opt-in** and only touches rewrites that cannot change meaning.
-- **Nothing runs inside code.** Fenced blocks, `<style>`, `<script>`, HTML comments, and code files are skipped, because a comma is punctuation in prose and syntax in JavaScript.
+**Mojibake.** UTF-8 read as cp1252 and saved back turns every Persian character into `Ø´` or `â€`. One bad save wrecks a whole content directory in a single commit, and nobody notices until a reader opens the page.
 
-The AI-tell rules are the part that did not exist anywhere. Detectors for English AI text are everywhere; for Persian there was nothing you could drop into a build.
+**And the newer one: text that reads as machine-written.** A long dash is ordinary punctuation in English. In Persian prose almost nobody types one by hand, so it is a strong tell. Same for a handful of filler phrases that Persian LLM output leans on. Detectors for English AI text are everywhere. For Persian there was nothing you could drop into a build.
 
 ## Install
 
@@ -45,16 +50,82 @@ The AI-tell rules are the part that did not exist anywhere. Detectors for Englis
 npm install -D github:ssepehrnoush/parsi-lint
 ```
 
-Or run it without installing:
+Then:
 
 ```bash
-npx github:ssepehrnoush/parsi-lint content/
+npx parsi-lint content/
 ```
 
-Node 18 or newer. No dependencies.
+Node 18 or newer. No dependencies, at runtime or otherwise.
 
-Not on the npm registry yet, so the commands above install straight from this
-repository. Once it is published, `npm install -D parsi-lint` will work too.
+Not on the npm registry yet, so the command above installs straight from this repository.
+
+## Why a linter and not a normalizer
+
+The existing Persian tools are normalizers: give them text, get cleaned text back. That is the wrong shape for a content pipeline. You do not want a script silently rewriting a medical article on its way to production. You want to know what is wrong, in a diff, before it ships, and to decide yourself.
+
+- **Exit code 1 on errors**, so CI blocks a bad merge.
+- **Every finding has a file, line and column**, so it lands on the right line of the diff.
+- **`--fix` is opt-in**, and only touches rewrites that cannot change meaning.
+- **Nothing runs inside code.** A comma is punctuation in prose and syntax in JavaScript.
+
+## What it catches
+
+Verbatim from `parsi-lint --list-rules`:
+
+```
+ai
+  ai/long-dash             error  Long dashes (— – ― ‒) are not typed by hand in Persian prose.
+  ai/smart-quotes          warn   Curly quotes instead of Persian «».
+  ai/cliche                warn   Filler phrases typical of Persian LLM output.
+
+typography
+  type/arabic-letters      error  Arabic ي ك ة instead of Persian ی ک ه.
+  type/tatweel             warn   Tatweel (ـ) used to stretch letters.
+  type/zwnj-prefix         error  Missing ZWNJ after می/نمی.
+  type/zwnj-plural         error  Missing ZWNJ before the plural ها.
+  type/zwnj-comparative    warn   Missing ZWNJ before تر / ترین.
+  type/latin-punctuation   error  Latin , ? ; touching Persian text instead of ، ؟ ؛.
+  type/space-before-punct  error  Space before ، . ؛ ؟ !
+  type/space-after-punct   warn   Missing space after ، ؛ ؟
+  type/latin-digits        warn   Latin digits (123) standing alone in Persian prose instead of ۱۲۳.
+  type/multiple-spaces     warn   Runs of spaces inside a sentence.
+  type/ezafe-kasra         off    Written ezafe kasra (ِ). Off by default.
+  type/hamza-before-verb   error  Ezafe hamza (هٔ) directly before a verb.
+
+encoding
+  enc/mojibake             error  UTF-8 text double-encoded through cp1252/latin-1.
+  enc/replacement-char     error  U+FFFD replacement character.
+
+text
+  text/repeated-number     error  A number repeated in a «تا» range, e.g. «۶ تا ۶ تا ۸».
+  text/repeated-word       error  The same Persian word twice in a row.
+  text/unresolved-marker   error  TODO / FIXME / [[...]] markers left in content.
+
+seo
+  seo/title-length         warn   Front-matter title longer than the Google result budget.
+  seo/h1-length            warn   Front-matter h1 long enough to wrap to four lines.
+  seo/description-length   warn   Meta description outside the display budget.
+
+presets: recommended, strict, seo-only
+```
+
+Two of those deserve a note.
+
+**`type/ezafe-kasra` is off by default** because some projects genuinely want diacritics: poetry, teaching material, children's books. Turn it on if your site is diacritic-free. A user never types a kasra into a search box, so a kasra in a title or an FAQ question quietly breaks keyword matching.
+
+**`seo/title-length` defaults to 66 characters.** Google cuts titles by pixel width, not character count. Measured on Persian titles rendered in Tahoma 20px, which is the widest a Windows user sees in a result: about 8.9px per character against a ~600px desktop budget, so roughly 67 characters. 66 leaves a margin. Set `titleMax` if you measured your own.
+
+## What it reads, and what it will not touch
+
+| Region | Read | Why |
+| --- | --- | --- |
+| Prose in `.md`, `.mdx`, `.txt`, `.html`, `.astro`, `.vue`, `.svelte` | yes | this is the content |
+| Front matter | SEO rules only | `title`, `h1`, `description` are fields, not prose |
+| Fenced code blocks | no | a comma there is syntax |
+| `<style>` and `<script>` | no | same |
+| HTML and line comments | no | notes to developers, not readers |
+| `.js`, `.ts`, `.css`, `.json` files | no | never scanned at all |
 
 ## Use
 
@@ -65,63 +136,11 @@ parsi-lint --lang fa                 # Persian messages
 parsi-lint -f github                 # annotations for GitHub Actions
 parsi-lint -f json                   # machine-readable
 parsi-lint --rule ai/long-dash       # one rule only
-parsi-lint --list-rules              # every rule and its default severity
+parsi-lint --max-warnings 0          # treat warnings as failures
 parsi-lint --init                    # write a starter config
 ```
 
 Exit codes: `0` clean or warnings only, `1` at least one error, `2` bad usage.
-
-## What it catches
-
-### AI tells
-
-| Rule | Default | Catches |
-|---|---|---|
-| `ai/long-dash` | error | `—` `–` `―` `‒` in Persian prose. In English an em-dash is ordinary punctuation. In Persian nobody types one by hand, so it is a strong signal the text came from a model. |
-| `ai/cliche` | warn | Filler phrases Persian LLM output leans on: «در دنیای امروز», «شایان ذکر است», «نقش بسزایی دارد», and about 30 more. Configurable. |
-| `ai/smart-quotes` | warn | `“ ” ‘ ’` instead of Persian `« »`. |
-
-### Typography
-
-| Rule | Default | Catches |
-|---|---|---|
-| `type/arabic-letters` | error | Arabic `ي ك ة` instead of Persian `ی ک ه`. Different code points, so search and sorting silently break. Auto-fixable. |
-| `type/zwnj-prefix` | error | «می شود» instead of «می‌شود». Auto-fixable. |
-| `type/zwnj-plural` | error | «کتاب ها» instead of «کتاب‌ها». Auto-fixable. |
-| `type/zwnj-comparative` | warn | «بزرگ تر» instead of «بزرگ‌تر». |
-| `type/latin-punctuation` | error | `,` `?` `;` where Persian wants `،` `؟` `؛`. Auto-fixable. Thousands separators are left alone. |
-| `type/space-before-punct` | error | A space before `،` `؛` `؟` `!`. Auto-fixable. |
-| `type/space-after-punct` | warn | No space after `،` `؛` `؟`. Auto-fixable. |
-| `type/latin-digits` | warn | A bare `123` sitting in a Persian sentence. |
-| `type/multiple-spaces` | warn | Runs of spaces used as layout. Auto-fixable. |
-| `type/tatweel` | warn | Kashida (`ـ`) stretching. Auto-fixable. |
-| `type/hamza-before-verb` | error | «مشاهدهٔ است», «گرفتهٔ می‌شود». An ezafe attaches to a noun, never a verb, so this is the fingerprint of a generation pipeline placing the mark blindly. |
-| `type/ezafe-kasra` | **off** | A written ezafe kasra (`ِ`). Off by default. Turn it on if your site is diacritic-free: a user never types a kasra into a search box, so a kasra in a title or an FAQ question quietly breaks keyword matching. |
-
-### Encoding
-
-| Rule | Default | Catches |
-|---|---|---|
-| `enc/mojibake` | error | UTF-8 read as cp1252 and saved again, so every Persian character became `Ø´` or `â€`. One bad save can wreck a whole content directory in a single commit, and it is invisible until someone opens the page. |
-| `enc/replacement-char` | error | `U+FFFD`, a character lost in a conversion. |
-
-### Text integrity
-
-| Rule | Default | Catches |
-|---|---|---|
-| `text/repeated-word` | error | The same word typed twice. ZWNJ-aware, so «کم‌کم کم می‌شود» is correctly left alone. |
-| `text/repeated-number` | error | «۶ تا ۶ تا ۸», a fragment of a previous edit surviving in a range. |
-| `text/unresolved-marker` | error | `TODO`, `FIXME`, `[[...]]` left in content. Configurable. |
-
-### SEO budgets (front matter)
-
-| Rule | Default | Catches |
-|---|---|---|
-| `seo/title-length` | warn | `title` over 66 characters. Google cuts titles by pixel width, not character count. Measured on Persian titles in Tahoma 20px, the widest a Windows user sees in a result: about 8.9px per character against a ~600px desktop budget, so ~67 characters. |
-| `seo/h1-length` | warn | `h1` over 85 characters. |
-| `seo/description-length` | warn | `description` outside 120 to 170 characters. |
-
-Run `parsi-lint --list-rules` for the live list.
 
 ## Configure
 
@@ -142,26 +161,19 @@ Run `parsi-lint --list-rules` for the live list.
 }
 ```
 
-Presets:
+Presets: **`recommended`** (default, everything unambiguous), **`strict`** (adds the judgement calls), **`seo-only`** (just the front-matter budgets).
 
-- **`recommended`** (default): everything that is unambiguously a defect.
-- **`strict`**: adds the judgement calls. Diacritics, digit style, and filler phrases become errors.
-- **`seo-only`**: just the front-matter budgets, for a pipeline that has its own prose rules.
-
-Rule values: `"error"`, `"warn"`, `"off"`, or `true` / `false`.
-
-## Silence a finding
+Silence a finding inline:
 
 ```html
 <!-- parsi-lint-disable-next-line ai/long-dash -->
-یک خط با خط تیرهٔ عمدی — که باید بماند.
+یک خط با خط تیرهٔ عمدی که باید بماند.
 
 متن دیگر. <!-- parsi-lint-disable-line -->
-
 <!-- parsi-lint-disable-file type/latin-digits -->
 ```
 
-With no rule names, the comment silences every rule. With names, only those.
+With no rule names it silences everything on that line. With names, only those.
 
 ## GitHub Actions
 
@@ -196,7 +208,18 @@ findings[0].messageFa;  // Persian
 fix('انجام می شود').text;  // 'انجام می‌شود'
 ```
 
-Every message ships in both English and Persian. `--lang fa` in the CLI, `messageFa` in the API.
+Every message ships in both languages. `--lang fa` in the CLI, `messageFa` in the API.
+
+## What it deliberately does not do
+
+Worth knowing before you adopt it.
+
+- **It is not an AI detector.** It flags surface tells, and a careful writer can produce all of them by hand while a careful model produces none. Treat `ai/cliche` as a smell, never as proof about a person.
+- **It does not spell-check.** No dictionary, no grammar model. Every rule is a pattern with a known failure mode.
+- **It does not parse HTML or Astro properly.** Skip regions are tracked line by line, which is enough for fenced blocks, `<style>`, `<script>` and comments, but a `<style>` attribute spanning several lines inside an odd template can slip through. If you need real structural extraction, this is not that tool yet.
+- **`--fix` will not touch «ای» or «اش».** Both are ambiguous often enough that an automatic rewrite would corrupt real sentences. They are reported by no rule rather than fixed by a guessing one.
+- **It does not enforce a house style.** No word bans, no tone rules, beyond the cliche list you can replace entirely.
+- **Reduplication is not analysed.** «کم‌کم کم می‌شود» is left alone by boundary rules, not by understanding it.
 
 ## Design notes
 
@@ -206,14 +229,13 @@ Every message ships in both English and Persian. `--lang fa` in the CLI, `messag
 - `۲۳,۸۰۰,۰۰۰` is a thousands separator, not a misplaced comma.
 - «کم‌کم کم می‌شود» is correct Persian, not a repeated word. A ZWNJ joins two halves of one word, so the half after it is not a word of its own.
 - «دربارهٔ مناسب‌ترین» and «تعرفهٔ به‌روز» are correct ezafes. Only an ezafe directly before a copular or auxiliary verb is wrong.
+- «در دنیای امروز» reports once, not twice, even though «دنیای امروز» nests inside it.
 
 On 100 published Persian articles that had already passed a hand-written content guard, this reports 2 findings, and both are real.
 
-**Fixers never guess.** `--fix` handles Arabic letters, ZWNJ after می, plural ها, Latin punctuation, spacing, and tatweel. It does not touch «ای» or «اش», which are ambiguous often enough that an automatic rewrite would corrupt real sentences. Fixes are idempotent and never run inside code or front matter.
-
 ## Contributing
 
-Adding a rule means adding an object to `src/rules.mjs` with an `id`, a `category`, a `severity`, and a `check(line, ctx)`. Add a `fix(line)` only when the rewrite cannot change meaning.
+A rule is an object in `src/rules.mjs` with an `id`, a `category`, a `severity` and a `check(line, ctx)`. Add a `fix(line)` only when the rewrite cannot change meaning.
 
 Please bring a test for both directions: what the rule catches, and a real sentence it must leave alone. The second one matters more.
 

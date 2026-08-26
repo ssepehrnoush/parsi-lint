@@ -1,0 +1,71 @@
+{
+  "title": "parsi-lint",
+  "font_size": 13,
+  "hold": 3.4,
+  "rows": [
+    { "t": "cmd", "s": "parsi-lint content/post.md --quiet" },
+    { "t": "gap" },
+    { "t": "out", "s": "content/post.md", "c": "bold" },
+    {
+      "t": "out",
+      "spans": [
+        ["     6:62  ", "dim"],
+        ["error", "red"],
+        ["  Long dash in Persian content. A strong AI tell: use a comma, «» or restructure.  ", "text"],
+        ["ai/long-dash", "dim"]
+      ]
+    },
+    { "t": "out", "spans": [["       › ", "dim"], ["—", "cyan"]] },
+    {
+      "t": "out",
+      "spans": [
+        ["     8:1   ", "dim"],
+        ["error", "red"],
+        ["  \"کرم ها\" needs a ZWNJ: \"کرم‌ها\".  ", "text"],
+        ["type/zwnj-plural", "dim"]
+      ]
+    },
+    { "t": "out", "spans": [["       › ", "dim"], ["کرم ها", "cyan"]] },
+    {
+      "t": "out",
+      "spans": [
+        ["     8:34  ", "dim"],
+        ["error", "red"],
+        ["  Latin \",\" in Persian text. Use \"،\".  ", "text"],
+        ["type/latin-punctuation", "dim"]
+      ]
+    },
+    { "t": "out", "spans": [["       › ", "dim"], [",", "cyan"]] },
+    {
+      "t": "out",
+      "spans": [
+        ["    10:20  ", "dim"],
+        ["error", "red"],
+        ["  Arabic \"ك\" should be Persian \"ک\". Different code points break search and matching.  ", "text"],
+        ["type/arabic-letters", "dim"]
+      ]
+    },
+    { "t": "out", "spans": [["       › ", "dim"], ["ك", "cyan"]] },
+    { "t": "gap" },
+    { "t": "out", "spans": [["4 errors", "red"], [" in 1 file", "text"]] },
+    { "t": "gap" },
+    { "t": "cmd", "s": "parsi-lint content/post.md --quiet --fix" },
+    { "t": "gap" },
+    { "t": "out", "s": "content/post.md", "c": "bold" },
+    {
+      "t": "out",
+      "spans": [
+        ["     6:62  ", "dim"],
+        ["error", "red"],
+        ["  Long dash in Persian content. A strong AI tell: use a comma, «» or restructure.  ", "text"],
+        ["ai/long-dash", "dim"]
+      ]
+    },
+    { "t": "out", "spans": [["       › ", "dim"], ["—", "cyan"]] },
+    { "t": "gap" },
+    { "t": "out", "spans": [["1 error", "red"], [" in 1 file", "text"]] },
+    { "t": "out", "spans": [["Fixed 1 file.", "green"]] },
+    { "t": "gap" },
+    { "t": "out", "spans": [["# three gone. the dash stays: fixers never guess.", "dim"]] }
+  ]
+}

@@ -22,3 +22,5 @@ jobs:
         run: |
           node bin/parsi-lint.mjs --version
           node bin/parsi-lint.mjs --list-rules
+      - name: Lint this repo with itself
+        run: node bin/parsi-lint.mjs --format github

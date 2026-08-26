@@ -1,0 +1,9 @@
+{
+  "extends": "recommended",
+  "include": ["**/*.md"],
+  "exclude": [
+    "**/node_modules/**",
+    "assets/demo-src/**",
+    "README.fa.md"
+  ]
+}

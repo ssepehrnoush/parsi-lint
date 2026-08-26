@@ -17,10 +17,21 @@
  *    guesses is worse than no fixer, because it silently changes meaning.
  *  - Prefer a narrow regex with a false-negative over a broad one with a
  *    false-positive. A linter people mute is a linter that does nothing.
+ *
+ * On the \uXXXX escapes: four characters in this file are written as escapes
+ * on purpose, because they are unreviewable as literals.
+ *   ‌  ZWNJ, the half-space. Invisible in every editor.
+ *   ي  Arabic yeh, identical on screen to Persian ی (ی).
+ *   ك  Arabic kaf, identical on screen to Persian ک (ک).
+ *   ة  teh marbuta, near-identical to ه (ه).
+ * The last three are exactly what `type/arabic-letters` exists to catch, so
+ * writing them literally would make the rule impossible to review. Ordinary
+ * readable Persian is left as-is: the cliche list and the messages are content,
+ * and escaping them would mean nobody could edit them.
  */
 
 const FA = '؀-ۿ';          // full Arabic block: letters, digits and punctuation
-const ZWNJ = '‌';               // نیم‌فاصله
+const ZWNJ = '\u200C';               // نیم\u200Cفاصله
 const FA_LETTER = `[${FA}]`;
 
 /**
@@ -39,11 +50,11 @@ const FA_DIGIT = '[۰-۹٠-٩]';
  * Word boundary for Persian, including the ZWNJ.
  *
  * A ZWNJ joins two halves of one word, so the half after it is not a word of
- * its own. Without this, «کم‌کم کم می‌شود» — perfectly correct Persian, "little
+ * its own. Without this, «کم\u200Cکم کم می\u200Cشود» — perfectly correct Persian, "little
  * by little it decreases" — reads as the word «کم» typed twice. Found on live
  * content; the repeated-word rule is unusable without it.
  */
-const FA_BOUND = `[${FA_ALPHA_RANGE}‌]`;
+const FA_BOUND = `[${FA_ALPHA_RANGE}\u200C]`;
 
 /** Count code points, not UTF-16 units. Persian is BMP, but emoji in titles is not. */
 export const cpLength = (s) => [...s].length;
@@ -77,7 +88,7 @@ const emDash = {
   docs: 'Long dashes (— – ― ‒) are not typed by hand in Persian prose.',
   check: (line) =>
     scan(line, /[‒–—―]/, () => ({
-      message: 'Long dash in Persian content — a strong AI tell. Use a comma, «» or restructure.',
+      message: 'Long dash in Persian content. A strong AI tell: use a comma, «» or restructure.',
       messageFa: 'خط تیرهٔ بلند در متن فارسی؛ نشانهٔ متن ماشینی است. به جایش ویرگول یا «» بگذار.',
     })),
 };
@@ -112,28 +123,28 @@ export const CLICHES = [
   'لازم به ذکر است',
   'لازم به یادآوری است',
   'قابل ذکر است',
-  'در نهایت می‌توان گفت',
-  'به طور کلی می‌توان گفت',
-  'در واقع می‌توان گفت',
+  'در نهایت می\u200Cتوان گفت',
+  'به طور کلی می\u200Cتوان گفت',
+  'در واقع می\u200Cتوان گفت',
   'با توجه به موارد فوق',
   'با توجه به مطالب فوق',
-  'همان‌طور که می‌دانید',
+  'همان\u200Cطور که می\u200Cدانید',
   'همان طور که می دانید',
-  'بدون شک می‌توان گفت',
+  'بدون شک می\u200Cتوان گفت',
   'در این مقاله سعی داریم',
   'در این مقاله قصد داریم',
-  'در این مقاله می‌خواهیم',
+  'در این مقاله می\u200Cخواهیم',
   'امیدواریم این مطلب مفید',
   'با ما همراه باشید',
   'تا انتهای این مطلب همراه ما باشید',
   'نقش بسزایی دارد',
-  'نقش بسزایی ایفا می‌کند',
+  'نقش بسزایی ایفا می\u200Cکند',
   'از اهمیت بالایی برخوردار است',
-  'از جایگاه ویژه‌ای برخوردار است',
+  'از جایگاه ویژه\u200Cای برخوردار است',
   'حائز اهمیت است',
   'کلام آخر',
   'سخن پایانی',
-  'جمع‌بندی نهایی',
+  'جمع\u200Cبندی نهایی',
   'راهکارهای نوین',
   'به طور چشمگیری',
   'بهبود چشمگیری',
@@ -147,17 +158,27 @@ const cliche = {
   docs: 'Filler phrases typical of Persian LLM output.',
   check: (line, ctx) => {
     const list = ctx.config.cliches ?? CLICHES;
+    // Longest first, and mask what matched. Several phrases nest inside others
+    // ("دنیای امروز" inside "در دنیای امروز"), and reporting both is noise that
+    // says nothing extra. The longest match is the one worth showing.
+    const byLength = [...list].sort((a, b) => b.length - a.length);
+    let masked = line;
     const findings = [];
-    for (const phrase of list) {
+
+    for (const phrase of byLength) {
       // Tolerate a plain space where the phrase has a ZWNJ, and vice versa.
-      const flexible = phrase.replace(/[‌ ]/g, `[${ZWNJ} ]`);
-      findings.push(
-        ...scan(line, new RegExp(flexible, 'g'), () => ({
-          message: `Filler phrase "${phrase}" — common in machine-written Persian. Cut it or say the thing directly.`,
-          messageFa: `عبارت پرکنندهٔ «${phrase}»؛ در متن ماشینی زیاد می‌آید. حذفش کن یا حرف اصلی را مستقیم بزن.`,
-        })),
-      );
+      const flexible = phrase.replace(/[\u200C ]/g, `[${ZWNJ} ]`);
+      const hits = scan(masked, new RegExp(flexible, 'g'), () => ({
+        message: `Filler phrase "${phrase}", common in machine-written Persian. Cut it or say the thing directly.`,
+        messageFa: `عبارت پرکنندهٔ «${phrase}»؛ در متن ماشینی زیاد می\u200Cآید. حذفش کن یا حرف اصلی را مستقیم بزن.`,
+      }));
+      if (!hits.length) continue;
+      findings.push(...hits);
+      // Blank out the matched spans so a shorter nested phrase cannot re-match.
+      // Same length, so every column already recorded stays correct.
+      masked = masked.replace(new RegExp(flexible, 'g'), (m) => ' '.repeat(m.length));
     }
+
     return findings;
   },
 };
@@ -165,24 +186,24 @@ const cliche = {
 /* ─────────────────────────── Typography ─────────────────────────── */
 
 /**
- * Arabic letters that look Persian but are not. ي/ك/ة come from Arabic
+ * Arabic letters that look Persian but are not. \u064A/\u0643/\u0629 come from Arabic
  * keyboards and from copy-paste; they break search, sorting, and matching
- * because ي (U+064A) and ی (U+06CC) are different code points.
+ * because \u064A (U+064A) and ی (U+06CC) are different code points.
  */
 const arabicLetters = {
   id: 'type/arabic-letters',
   category: 'typography',
   severity: 'error',
-  docs: 'Arabic ي ك ة instead of Persian ی ک ه.',
+  docs: 'Arabic \u064A \u0643 \u0629 instead of Persian ی ک ه.',
   check: (line) =>
-    scan(line, /[يكة]/, (m) => {
-      const map = { 'ي': 'ی', 'ك': 'ک', 'ة': 'ه' };
+    scan(line, /[\u064A\u0643\u0629]/, (m) => {
+      const map = { '\u064A': 'ی', '\u0643': 'ک', '\u0629': 'ه' };
       return {
         message: `Arabic "${m[0]}" should be Persian "${map[m[0]]}". Different code points break search and matching.`,
-        messageFa: `حرف عربی «${m[0]}» باید فارسیِ «${map[m[0]]}» باشد. کد این دو فرق دارد و سرچ را می‌شکند.`,
+        messageFa: `حرف عربی «${m[0]}» باید فارسیِ «${map[m[0]]}» باشد. کد این دو فرق دارد و سرچ را می\u200Cشکند.`,
       };
     }),
-  fix: (line) => line.replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/ة/g, 'ه'),
+  fix: (line) => line.replace(/\u064A/g, 'ی').replace(/\u0643/g, 'ک').replace(/\u0629/g, 'ه'),
 };
 
 /** Tatweel/kashida — decorative letter stretching that survives copy-paste. */
@@ -194,7 +215,7 @@ const tatweel = {
   check: (line) =>
     scan(line, /ـ+/, () => ({
       message: 'Tatweel (kashida) in text. It is decoration and breaks word matching.',
-      messageFa: 'کشیده (ـ) در متن. تزئینی است و تطبیق واژه را خراب می‌کند.',
+      messageFa: 'کشیده (ـ) در متن. تزئینی است و تطبیق واژه را خراب می\u200Cکند.',
     })),
   fix: (line) => line.replace(/ـ+/g, ''),
 };
@@ -202,9 +223,9 @@ const tatweel = {
 /**
  * Missing ZWNJ — the single most common Persian typography defect.
  * Three narrow patterns, each unambiguous:
- *   می / نمی  + verb        «می شود»   → «می‌شود»
- *   noun + ها/های/هایی      «کتاب ها»  → «کتاب‌ها»
- *   adj  + تر/ترین          «بزرگ تر»  → «بزرگ‌تر»
+ *   می / نمی  + verb        «می شود»   → «می\u200Cشود»
+ *   noun + ها/های/هایی      «کتاب ها»  → «کتاب\u200Cها»
+ *   adj  + تر/ترین          «بزرگ تر»  → «بزرگ\u200Cتر»
  *
  * Deliberately not covered: «ای» and «اش», which are ambiguous often enough
  * that a fixer would corrupt real sentences.
@@ -216,8 +237,8 @@ const zwnjPrefix = {
   docs: 'Missing ZWNJ after می/نمی.',
   check: (line) =>
     scan(line, new RegExp(`(?<!${FA_ALPHA})(ن?می) (${FA_ALPHA}+)`, 'g'), (m) => ({
-      message: `"${m[1]} ${m[2]}" needs a ZWNJ: "${m[1]}‌${m[2]}".`,
-      messageFa: `«${m[1]} ${m[2]}» نیم‌فاصله می‌خواهد: «${m[1]}‌${m[2]}».`,
+      message: `"${m[1]} ${m[2]}" needs a ZWNJ: "${m[1]}\u200C${m[2]}".`,
+      messageFa: `«${m[1]} ${m[2]}» نیم\u200Cفاصله می\u200Cخواهد: «${m[1]}\u200C${m[2]}».`,
     })),
   fix: (line) => line.replace(new RegExp(`(?<!${FA_ALPHA})(ن?می) (?=${FA_ALPHA})`, 'g'), `$1${ZWNJ}`),
 };
@@ -229,8 +250,8 @@ const zwnjPlural = {
   docs: 'Missing ZWNJ before the plural ها.',
   check: (line) =>
     scan(line, new RegExp(`(${FA_ALPHA}{2,}) (ها(?:ی|یی)?)(?!${FA_ALPHA})`, 'g'), (m) => ({
-      message: `"${m[1]} ${m[2]}" needs a ZWNJ: "${m[1]}‌${m[2]}".`,
-      messageFa: `«${m[1]} ${m[2]}» نیم‌فاصله می‌خواهد: «${m[1]}‌${m[2]}».`,
+      message: `"${m[1]} ${m[2]}" needs a ZWNJ: "${m[1]}\u200C${m[2]}".`,
+      messageFa: `«${m[1]} ${m[2]}» نیم\u200Cفاصله می\u200Cخواهد: «${m[1]}\u200C${m[2]}».`,
     })),
   fix: (line) =>
     line.replace(new RegExp(`(${FA_ALPHA}{2,}) (ها(?:ی|یی)?)(?!${FA_ALPHA})`, 'g'), `$1${ZWNJ}$2`),
@@ -243,8 +264,8 @@ const zwnjComparative = {
   docs: 'Missing ZWNJ before تر / ترین.',
   check: (line) =>
     scan(line, new RegExp(`(${FA_ALPHA}{2,}) (تر(?:ین)?)(?!${FA_ALPHA})`, 'g'), (m) => ({
-      message: `"${m[1]} ${m[2]}" is usually written "${m[1]}‌${m[2]}".`,
-      messageFa: `«${m[1]} ${m[2]}» معمولاً «${m[1]}‌${m[2]}» نوشته می‌شود.`,
+      message: `"${m[1]} ${m[2]}" is usually written "${m[1]}\u200C${m[2]}".`,
+      messageFa: `«${m[1]} ${m[2]}» معمولاً «${m[1]}\u200C${m[2]}» نوشته می\u200Cشود.`,
     })),
 };
 
@@ -286,7 +307,7 @@ const spaceBeforePunct = {
   check: (line) =>
     scan(line, /\s+([،؛؟!.])/, (m) => ({
       message: `Space before "${m[1]}". Punctuation attaches to the word before it.`,
-      messageFa: `فاصله پیش از «${m[1]}». نشانه به واژهٔ قبلش می‌چسبد.`,
+      messageFa: `فاصله پیش از «${m[1]}». نشانه به واژهٔ قبلش می\u200Cچسبد.`,
     })),
   fix: (line) => line.replace(/[ \t]+([،؛؟!])/g, '$1'),
 };
@@ -373,7 +394,7 @@ const ezafeKasra = {
     for (const w of keep) masked = masked.split(w).join(' '.repeat(w.length));
     return scan(masked, /ِ/, () => ({
       message: 'Written ezafe kasra. Users never type a kasra in a search box, so it breaks keyword matching.',
-      messageFa: 'کسرهٔ اضافه در متن. کاربر در سرچ کسره تایپ نمی‌کند، پس تطبیق کیورد را می‌شکند.',
+      messageFa: 'کسرهٔ اضافه در متن. کاربر در سرچ کسره تایپ نمی\u200Cکند، پس تطبیق کیورد را می\u200Cشکند.',
     }));
   },
   fix: (line) => {
@@ -391,10 +412,10 @@ const ezafeKasra = {
 
 /**
  * The ezafe hamza (هٔ) attached to a verb. An ezafe links a noun or adjective
- * to what follows it, so «مشاهدهٔ است» or «گرفتهٔ می‌شود» is never correct —
+ * to what follows it, so «مشاهدهٔ است» or «گرفتهٔ می\u200Cشود» is never correct —
  * it is the signature of a generation pipeline placing the mark blindly.
  * Kept deliberately narrow: only explicit copular and auxiliary verbs, because
- * «دربارهٔ مناسب‌ترین» and «تعرفهٔ به‌روز» are perfectly correct ezafes.
+ * «دربارهٔ مناسب\u200Cترین» and «تعرفهٔ به\u200Cروز» are perfectly correct ezafes.
  */
 const hamzaBeforeVerb = {
   id: 'type/hamza-before-verb',
@@ -404,10 +425,10 @@ const hamzaBeforeVerb = {
   check: (line) =>
     scan(
       line,
-      /(\S*ٔ)\s+(است|بود|هست|نیست|شد|شود|شوید|باشد|می‌\S+|نمی‌\S+)(?![ء-ي])/g,
+      /(\S*ٔ)\s+(است|بود|هست|نیست|شد|شود|شوید|باشد|می\u200C\S+|نمی\u200C\S+)(?![ء-\u064A])/g,
       (m) => ({
         message: `Ezafe "${m[1]}" before the verb "${m[2]}". An ezafe attaches to a noun, never a verb.`,
-        messageFa: `نشانهٔ اضافهٔ «${m[1]}» پیش از فعل «${m[2]}». اضافه به فعل نمی‌چسبد.`,
+        messageFa: `نشانهٔ اضافهٔ «${m[1]}» پیش از فعل «${m[2]}». اضافه به فعل نمی\u200Cچسبد.`,
       }),
     ),
 };
@@ -426,8 +447,8 @@ const mojibake = {
   docs: 'UTF-8 text double-encoded through cp1252/latin-1.',
   check: (line) =>
     scan(line, /â€|Ã[^\x00-\x7F]|Ø[\x80-\xBF]|Ù[\x80-\xBF]/, () => ({
-      message: 'Double-encoded UTF-8 (mojibake). The file was saved with the wrong encoding — re-save it as UTF-8 from the original.',
-      messageFa: 'مویجیبیک؛ فایل با انکودینگ اشتباه ذخیره شده. از نسخهٔ سالم دوباره با UTF-8 ذخیره‌اش کن.',
+      message: 'Double-encoded UTF-8 (mojibake). The file was saved with the wrong encoding. Re-save it as UTF-8 from the original.',
+      messageFa: 'مویجیبیک؛ فایل با انکودینگ اشتباه ذخیره شده. از نسخهٔ سالم دوباره با UTF-8 ذخیره\u200Cاش کن.',
     })),
 };
 
@@ -459,8 +480,8 @@ const repeatedNumber = {
   docs: 'A number repeated in a «تا» range, e.g. «۶ تا ۶ تا ۸».',
   check: (line) =>
     scan(line, /([۰-۹0-9]+)\s+تا\s+\1\s+تا\s/, () => ({
-      message: 'Repeated number in a range — a fragment of an earlier edit survived. Check the real value.',
-      messageFa: 'عدد تکراری در بازه؛ تکه‌ای از ویرایش قبلی جا مانده. عدد درست را چک کن.',
+      message: 'Repeated number in a range. A fragment of an earlier edit survived, so check the real value.',
+      messageFa: 'عدد تکراری در بازه؛ تکه\u200Cای از ویرایش قبلی جا مانده. عدد درست را چک کن.',
     })),
 };
 
@@ -493,7 +514,7 @@ const todoMarker = {
       findings.push(
         ...scan(line, new RegExp(p, 'g'), (m) => ({
           message: `Unresolved marker "${m[0]}" left in content.`,
-          messageFa: `نشانهٔ تعیین‌تکلیف‌نشدهٔ «${m[0]}» در متن مانده.`,
+          messageFa: `نشانهٔ تعیین\u200Cتکلیف\u200Cنشدهٔ «${m[0]}» در متن مانده.`,
         })),
       );
     }
@@ -525,7 +546,7 @@ const seoTitle = {
     return [{
       field: 'title',
       message: `Title is ${len} characters (budget ${max}); Google will cut the tail. Trim the brand suffix first, never a keyword.`,
-      messageFa: `تیتر ${len} کاراکتر است (بودجه ${max})؛ گوگل ته آن را می‌بُرد. اول پسوند برند را کوتاه کن، کیورد را هرگز.`,
+      messageFa: `تیتر ${len} کاراکتر است (بودجه ${max})؛ گوگل ته آن را می\u200Cبُرد. اول پسوند برند را کوتاه کن، کیورد را هرگز.`,
     }];
   },
 };
@@ -562,14 +583,14 @@ const seoDescription = {
       return [{
         field: 'description',
         message: `Description is ${len} characters (max ${max}); the tail gets cut in the result.`,
-        messageFa: `توضیح متا ${len} کاراکتر است (سقف ${max})؛ ته آن در نتیجه بریده می‌شود.`,
+        messageFa: `توضیح متا ${len} کاراکتر است (سقف ${max})؛ ته آن در نتیجه بریده می\u200Cشود.`,
       }];
     }
     if (len < min) {
       return [{
         field: 'description',
         message: `Description is only ${len} characters (min ${min}); you are wasting result space. Add a concrete reason to click.`,
-        messageFa: `توضیح متا فقط ${len} کاراکتر است (کف ${min})؛ فضای نتیجه هدر می‌رود. یک دلیل واقعی برای کلیک اضافه کن.`,
+        messageFa: `توضیح متا فقط ${len} کاراکتر است (کف ${min})؛ فضای نتیجه هدر می\u200Cرود. یک دلیل واقعی برای کلیک اضافه کن.`,
       }];
     }
     return [];

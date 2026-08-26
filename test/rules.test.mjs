@@ -37,12 +37,12 @@ describe('ai tells', () => {
 });
 
 describe('typography', () => {
-  test('flags Arabic ي and ك', () => {
-    assert.ok(has('ايران و كتاب', 'type/arabic-letters'));
+  test('flags Arabic \u064A and \u0643', () => {
+    assert.ok(has('ا\u064Aران و \u0643تاب', 'type/arabic-letters'));
   });
 
   test('fixes Arabic letters to Persian', () => {
-    assert.equal(fix('ايران و كتاب').text, 'ایران و کتاب');
+    assert.equal(fix('ا\u064Aران و \u0643تاب').text, 'ایران و کتاب');
   });
 
   test('flags a missing ZWNJ after می', () => {
@@ -50,19 +50,19 @@ describe('typography', () => {
   });
 
   test('does not flag می that is already joined', () => {
-    assert.ok(!has('این کار انجام می‌شود.', 'type/zwnj-prefix'));
+    assert.ok(!has('این کار انجام می\u200Cشود.', 'type/zwnj-prefix'));
   });
 
-  test('fixes می شود to می‌شود', () => {
-    assert.equal(fix('انجام می شود').text, 'انجام می‌شود');
+  test('fixes می شود to می\u200Cشود', () => {
+    assert.equal(fix('انجام می شود').text, 'انجام می\u200Cشود');
   });
 
   test('flags a missing ZWNJ before the plural ها', () => {
     assert.ok(has('کتاب ها روی میز است.', 'type/zwnj-plural'));
   });
 
-  test('fixes کتاب ها to کتاب‌ها', () => {
-    assert.equal(fix('کتاب ها روی میز').text, 'کتاب‌ها روی میز');
+  test('fixes کتاب ها to کتاب\u200Cها', () => {
+    assert.equal(fix('کتاب ها روی میز').text, 'کتاب\u200Cها روی میز');
   });
 
   test('flags a Latin comma after Persian', () => {
@@ -82,12 +82,12 @@ describe('typography', () => {
   });
 
   test('flags an ezafe hamza before a verb', () => {
-    assert.ok(has('این صفحهٔ می‌خواهد بارگذاری شود.', 'type/hamza-before-verb'));
+    assert.ok(has('این صفحهٔ می\u200Cخواهد بارگذاری شود.', 'type/hamza-before-verb'));
   });
 
   test('leaves a correct ezafe alone', () => {
-    assert.ok(!has('دربارهٔ مناسب‌ترین روش', 'type/hamza-before-verb'));
-    assert.ok(!has('تعرفهٔ به‌روز کلینیک', 'type/hamza-before-verb'));
+    assert.ok(!has('دربارهٔ مناسب\u200Cترین روش', 'type/hamza-before-verb'));
+    assert.ok(!has('تعرفهٔ به\u200Cروز کلینیک', 'type/hamza-before-verb'));
   });
 
   // Every "does not flag" case below came from a false positive found while
@@ -232,7 +232,7 @@ describe('findings', () => {
   });
 
   test('a clean Persian paragraph produces nothing', () => {
-    const clean = 'کلینیک ما از ساعت ۹ صبح باز است و نوبت‌دهی تلفنی دارد.\n';
+    const clean = 'کلینیک ما از ساعت ۹ صبح باز است و نوبت\u200Cدهی تلفنی دارد.\n';
     assert.deepEqual(ids(clean), []);
   });
 });
@@ -249,21 +249,21 @@ describe('fix safety', () => {
   });
 
   test('is idempotent', () => {
-    const once = fix('ايران، كتاب ها انجام می شود').text;
+    const once = fix('ا\u064Aران، \u0643تاب ها انجام می شود').text;
     assert.equal(fix(once).text, once);
   });
 });
 
 describe('word boundaries and ZWNJ', () => {
-  // From live content: «کم‌کم کم می‌شود» is correct Persian ("little by little
+  // From live content: «کم\u200Cکم کم می\u200Cشود» is correct Persian ("little by little
   // it decreases"). The second half of a ZWNJ-joined word is not its own word.
   test('does not flag the second half of a ZWNJ-joined word as a repeat', () => {
-    assert.ok(!has('بعد کم‌کم کم می‌شود', 'text/repeated-word'));
-    assert.ok(!has('آرام‌آرام آرام شد', 'text/repeated-word'));
+    assert.ok(!has('بعد کم\u200Cکم کم می\u200Cشود', 'text/repeated-word'));
+    assert.ok(!has('آرام\u200Cآرام آرام شد', 'text/repeated-word'));
   });
 
   test('still flags a genuine repeat next to a ZWNJ word', () => {
-    assert.ok(has('کم‌کم بهتر بهتر شد', 'text/repeated-word'));
+    assert.ok(has('کم\u200Cکم بهتر بهتر شد', 'text/repeated-word'));
   });
 
   test('a thousands separator is not a latin comma error', () => {
@@ -272,5 +272,21 @@ describe('word boundaries and ZWNJ', () => {
 
   test('digits are not words', () => {
     assert.ok(!has('دوز ۲.۵، ۵، ۷.۵ گرم', 'text/repeated-word'));
+  });
+});
+
+describe('cliche overlap', () => {
+  // «دنیای امروز» nests inside «در دنیای امروز». Only the longest should report.
+  test('reports a nested filler phrase once', () => {
+    const found = lint('در دنیای امروز همه آنلاین\u200Cاند.', { config: strict })
+      .findings.filter((f) => f.rule === 'ai/cliche');
+    assert.equal(found.length, 1);
+    assert.match(found[0].message, /در دنیای امروز/);
+  });
+
+  test('still reports two distinct phrases on one line', () => {
+    const found = lint('شایان ذکر است که این نکته حائز اهمیت است.', { config: strict })
+      .findings.filter((f) => f.rule === 'ai/cliche');
+    assert.equal(found.length, 2);
   });
 });
