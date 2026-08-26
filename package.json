@@ -1,0 +1,61 @@
+{
+  "name": "parsi-lint",
+  "version": "0.1.0",
+  "description": "Linter for Persian (Farsi) content: catches AI-generated tells, missing ZWNJ, Arabic letters, mojibake and SEO length budgets. Zero dependencies, CI-ready.",
+  "type": "module",
+  "bin": {
+    "parsi-lint": "bin/parsi-lint.mjs"
+  },
+  "main": "src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./rules": "./src/rules.mjs"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "README.md",
+    "README.fa.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/",
+    "lint:self": "node bin/parsi-lint.mjs test/fixtures --format compact"
+  },
+  "keywords": [
+    "persian",
+    "farsi",
+    "parsi",
+    "linter",
+    "lint",
+    "rtl",
+    "zwnj",
+    "half-space",
+    "نیم‌فاصله",
+    "فارسی",
+    "typography",
+    "persian-nlp",
+    "ai-detection",
+    "ai-content",
+    "em-dash",
+    "mojibake",
+    "seo",
+    "content-quality",
+    "text-quality",
+    "i18n",
+    "ci"
+  ],
+  "author": "ssepehrnoush",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ssepehrnoush/parsi-lint.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ssepehrnoush/parsi-lint/issues"
+  },
+  "homepage": "https://github.com/ssepehrnoush/parsi-lint#readme",
+  "engines": {
+    "node": ">=18"
+  }
+}
