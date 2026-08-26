@@ -11,6 +11,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/ssepehrnoush/parsi-lint/actions/workflows/ci.yml"><img alt="ci" src="https://github.com/ssepehrnoush/parsi-lint/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="license MIT" src="https://img.shields.io/badge/license-MIT-blue.svg">
   <img alt="node >= 18" src="https://img.shields.io/badge/node-%3E%3D18-brightgreen">
   <img alt="dependencies 0" src="https://img.shields.io/badge/dependencies-0-brightgreen">
