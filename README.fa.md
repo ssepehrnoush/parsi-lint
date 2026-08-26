@@ -5,6 +5,12 @@
 </p>
 
 <p align="center">
+  <a href="README.md">English</a>
+  &nbsp;·&nbsp;
+  <b>فارسی</b>
+</p>
+
+<p align="center">
   <a href="https://github.com/ssepehrnoush/parsi-lint/actions/workflows/ci.yml"><img alt="ci" src="https://github.com/ssepehrnoush/parsi-lint/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="license MIT" src="https://img.shields.io/badge/license-MIT-blue.svg">
   <img alt="node >= 18" src="https://img.shields.io/badge/node-%3E%3D18-brightgreen">
@@ -16,7 +22,6 @@
   <img alt="parsi-lint" src="assets/demo.svg" width="880">
 </p>
 
-<p align="center"><a href="README.md">English</a></p>
 
 <div dir="rtl">
 

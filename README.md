@@ -11,6 +11,12 @@
 </p>
 
 <p align="center">
+  <b>English</b>
+  &nbsp;·&nbsp;
+  <a href="README.fa.md">فارسی</a>
+</p>
+
+<p align="center">
   <a href="https://github.com/ssepehrnoush/parsi-lint/actions/workflows/ci.yml"><img alt="ci" src="https://github.com/ssepehrnoush/parsi-lint/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="license MIT" src="https://img.shields.io/badge/license-MIT-blue.svg">
   <img alt="node >= 18" src="https://img.shields.io/badge/node-%3E%3D18-brightgreen">
@@ -22,7 +28,6 @@
   <img alt="parsi-lint finding four errors in a Persian article, then fixing three of them" src="assets/demo.svg" width="880">
 </p>
 
-<p align="center"><a href="README.fa.md">فارسی</a></p>
 
 ## The bugs you cannot see
 
