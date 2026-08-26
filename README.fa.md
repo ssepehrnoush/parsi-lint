@@ -11,7 +11,7 @@
 </div>
 
 ```bash
-npx parsi-lint content/
+npx github:ssepehrnoush/parsi-lint content/
 ```
 
 <div dir="rtl">
@@ -34,7 +34,7 @@ npx parsi-lint content/
 </div>
 
 ```bash
-npm install -D parsi-lint
+npm install -D github:ssepehrnoush/parsi-lint
 ```
 
 <div dir="rtl">

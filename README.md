@@ -7,7 +7,7 @@ Zero dependencies. Runs in CI. Fixes what it can safely fix.
 [فارسی](README.fa.md)
 
 ```bash
-npx parsi-lint content/
+npx github:ssepehrnoush/parsi-lint content/
 ```
 
 ```
@@ -42,16 +42,19 @@ The AI-tell rules are the part that did not exist anywhere. Detectors for Englis
 ## Install
 
 ```bash
-npm install -D parsi-lint
+npm install -D github:ssepehrnoush/parsi-lint
 ```
 
 Or run it without installing:
 
 ```bash
-npx parsi-lint content/
+npx github:ssepehrnoush/parsi-lint content/
 ```
 
 Node 18 or newer. No dependencies.
+
+Not on the npm registry yet, so the commands above install straight from this
+repository. Once it is published, `npm install -D parsi-lint` will work too.
 
 ## Use
 
@@ -173,7 +176,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - run: npx parsi-lint content/ --format github
+      - run: npx github:ssepehrnoush/parsi-lint content/ --format github
 ```
 
 The `github` format emits annotations, so each finding shows up on its own line in the pull request diff.
